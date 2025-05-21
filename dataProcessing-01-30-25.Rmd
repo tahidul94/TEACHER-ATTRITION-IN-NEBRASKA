@@ -1,0 +1,1207 @@
+---
+title: "data Processing and cleaning"
+output: html_document
+date: "2024-03-14"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Introduction 
+
+This document outlines the processes undertaken to prepare, clean, and analyze a dataset covering staff details from 1983 to 2021, with a focus on understanding teacher turnover and the factors influencing it. The dataset comprises various attributes, including demographics, position details, and educational qualifications. Our objective is to clean and structure the dataset for an in-depth analysis aimed at identifying trends and insights into the factors behind teacher turnover.
+
+## Data Preparation
+  
+  Five years data set has been considered for preparatory work from 1983 to 2021 to determine the count of teacher turnover and the factors behind it . I am keeping the mandatory attributes to view the trends based on year like:&nbsp;
+
+1. NDE_STAFF_ID : Unique Staff ID.&nbsp;
+
+2. DataYears    : Year of service.&nbsp;
+
+3. Ethnicity    : Ethnicity of Staff.&nbsp;
+
+4. Gender       : Gender of Staff.&nbsp;
+
+5. TotalExperience : Total Experience of Staff.&nbsp;
+
+6. MasterDegree    : The information of Staff bearing Masters Degree.&nbsp;
+
+7. EducationalAttainment : Educational Qualification of Staff.&nbsp;
+
+8. Position : The information of Staff's position is stored in dataset.&nbsp;
+ 
+ 9. Position_Codes : The position codes are abbreviated based on position.&nbsp;
+
+```{r , echo=FALSE, warning=FALSE, message=FALSE}
+library(dplyr)
+dataDrive <- "/Users/mdtahidulislam/Library/CloudStorage/OneDrive-SharedLibraries-UniversityofNebraskaatOmaha/Restricted-UNO-CEHHS - Secure Data Storage - tahidul/STAFF/pipeline"
+
+files <- list.files(path = dataDrive, pattern = "*.csv", full.names = TRUE)
+
+staffdf <- do.call(rbind, lapply(files, read.csv, stringsAsFactors = FALSE))
+  staffdf[staffdf == ''] <- NA
+#staffdf
+```
+
+```{r , echo=FALSE, warning=FALSE, message=FALSE}
+
+Teacher <- c("HEAD TEACHER", "DEPARTMENT HEAD", "SPED TEACHER COLLABORATING/CO-TEACHING" ,
+             "SPEDTEACHER TEACHING CORE SUBJECTS/ALTSTDS", 
+             "SPEDTEACHER TEACHING CORE SUBJECTS/GRADING" ,
+             "SPED TEACHER TEACHING CORE SUBJECTS/GRADING", 
+             "SPED TEACHER TEACHING CORE SUBJECTS/ALT STDS" , 
+             "TEACHER" , "TEACHER OF THE DEAF OR HARD OF HEARING" , 
+             "TEACHER OF THE VISUALLY IMPAIRED", "TEACHER-COLLABORATOR", 
+             "TEACHER-FACILITATOR")
+
+Counselor <- c("ELEMENTARY COUNSELOR", "SECONDARY COUNSELOR",
+               "VOCATIONAL ADJUSTMENT COUNSELOR")
+
+Administrator <- c("ACTIVITIES/ATHLETIC DIRECTOR", "ASSISTANT ADMINISTRATOR", 
+                   "ASSISTANT PRINCIPAL","ASSISTANT SUPERINTENDENT",
+                   "CHIEF ADMINISTRATOR","COORDINATOR", "PRINCIPAL", 
+                   "SPECIAL EDUCATION ADMINISTRATOR/DIRECTOR", 
+                   "STAFF DEVELOPMENT COORDINATOR ", "STAFF DEVELOPMENT DIRECTOR",
+                   "STAFF DEVELOPMENT COORDINATOR", "SUPERINTENDENT", 
+                   "COUNTY SUPERINTENDENT" ,"SUPERVISOR/DIRECTOR",
+                   "TECHNOLOGY COORDINATOR", "ADMINISTRATIVE ASSISTANT",
+                   "ASSISTIVE TECHNOLOGY SPECIALIST")
+
+Specialist <- c("AUDIOLOGIST", "HOME SCHOOL LIASON", "HOME SCHOOL LIAISON",
+                "MENTAL HEALTH PRACTITIONER", "MUSIC THERAPIST",
+                "NON-SPED HOME VISITING SPECIALIST",
+                "NON-SPED HOME VISITOR", "OCCUPATIONAL THERAPIST", 
+                "ORIENTATION AND MOBILITY SPECIALIST", "PHYSICAL THERAPIST", 
+                "PROGRAM CONSULTANT/COORDINATOR", "PROGRAM SUPERVISOR/DIRECTOR",
+                "PSYCHOLOGIST", "PSYCHOLOGIST ASSISTANT", "SCHOOL NURSE",
+                "SCHOOL TRANSITION SPECIALIST", "SIGN LANGUAGE INTERPRETER", 
+                "SOCIAL WORKER", "SPEECH LANGUAGE TECHNICIAN",
+                "SPEECH PATHOLOGIST","BUSINESS MANAGER",
+                "MENTAL HEALTH PRACTITIONER (ESU ONLY)")
+
+Support_Staff <- c("ASSISTANT TECHNOLOGY SPECIALIST", "INSTRUCTIONAL PARAPROFESSIONAL",
+                   "NON-INSTRUCTIONAL PARAPROFESSIONAL", "SPED PARAPROFESSIONAL",
+                   "ASSISTIVE TECHNOLOGY SPECIALIST (ESU ONLY)")
+
+Teacher_Leader <- c("COORDINATOR", "CURRICULUM SPECIALIST", "INSTRUCTIONAL COACH",
+                    "SPEDTEACHER FACILITATOR","SPED TEACHER-FACILITATOR",
+                    "LIBRARIAN","MEDIA SPECIALIST")
+
+staffdf <-staffdf %>% 
+  dplyr::select(NDE_STAFF_ID , DataYears,DistrictName, Ethnicity, Gender, TotalExperience, Ethnicity,FTE, MasterDegree, EducationalAttainment,Position) %>% 
+  mutate(Position_Codes = as.factor(
+    case_when(Position %in% Teacher ~ "Teacher",
+              Position %in% Counselor ~ "Counselor",
+              Position %in% Administrator ~ "Administrator",
+              Position %in% Specialist ~ "Specialist",
+              Position %in% Support_Staff ~ "Support Staff",
+              Position %in% c("NULL", "", "NA") ~ "Unknown",
+              Position %in% Teacher_Leader ~ "Teacher Leader",
+                           TRUE ~ as.character(Position))))    %>%
+  mutate(Gender = as.factor(case_when(Gender %in% c("f", "F") ~ "Female",
+                           Gender %in% c("m", "M") ~ "Male",
+                           Gender %in% c("NULL","NA") ~ "Unknown",
+                           TRUE ~ as.character(Gender))))    %>%
+  mutate(Ethnicity = as.factor(case_when(Ethnicity %in% c("WH", "wh","3","0") ~ "White",
+                           Ethnicity %in% c("HI","5") ~ "Hispanic",
+                           Ethnicity %in% c("AS") ~ "Asian",
+                           Ethnicity %in% c("BL","4") ~ "Black",
+                           Ethnicity %in% c("AM","1") ~ "Native American",
+                           Ethnicity %in% c("PI","2") ~ "Pacific Islander",
+                           Ethnicity %in% c("MU") ~ "Multiple Categories",
+                           Ethnicity %in% c("NULL","NA") ~ "Races Unknown",
+                           TRUE ~ as.character(Ethnicity))))
+
+```
+
+# Missing value
+```{r}
+# There was 19 ID which all variable is NA,so i deleted all of them
+staffdf <- na.omit(staffdf) 
+staffdf
+#staff1[!complete.cases(staff1),]
+```
+
+## Data Limitations
+
+There are few of the columns which are having limited use.Apart from that, some of the data values are missing for most of the columns, which may create abnormal trend. Some of the examples are as follows.
+Gender column has some of the null values which has been declared as Unknown.
+Educational Attainment has null values along with the fields which are not been reported.
+Ethnicity has null values where those fields has been declared as Races unknown.
+
+## Research Questions  
+
+1. What are the retirement trends of Nebraska public District teachers across years 2000 to 2020?  
+
+```{r}
+library(dplyr)
+
+ccc <- head(staffdf,100)
+#write.csv(ccc, file ="ccc1.csv")
+#?write.csv
+staff_df <- staffdf %>%
+  filter(DataYears > 19992000 & grepl("PUBLIC",DistrictName, ignore.case = TRUE))
+
+
+#Creating a column named myYear from the DataYears with first four character
+staff_df$myYear <- as.numeric(substr(as.character(staff_df$DataYears), 1, 4)) 
+
+#length(unique(staff_df$DistrictName))
+
+dd <- staff_df %>%
+  group_by(NDE_STAFF_ID) %>%
+  mutate(joinYear = min(myYear),
+         resignYear = max(myYear)) %>%
+  ungroup() %>%
+  group_by(myYear, DistrictName) %>%
+  summarise(
+    StaffCount = length(unique(NDE_STAFF_ID)),
+    ResignedCount = length(unique(NDE_STAFF_ID[resignYear <= 2021 & resignYear == myYear])),
+    percentResign = (ResignedCount / StaffCount) * 100,
+    .groups = "drop"
+  ) %>%
+  filter(myYear <2020 & myYear > 2012) # &DistrictName == "PAPILLION-LA VISTA PUBLIC SCHS")
+```
+
+  
+```{r}
+library(dplyr)
+top_schools_by_year <- dd %>%
+  arrange(myYear, desc(percentResign)) %>%
+  group_by(myYear) %>%
+  slice_max(order_by = percentResign, n = 10) %>%
+  ungroup()
+top_schools_by_year
+```
+
+```{r}
+library(ggplot2)
+
+plot_data <- top_schools_by_year %>%
+  filter(myYear == 2015) # Choose the year i am  interested in
+
+ggplot(plot_data, aes(x = reorder(DistrictName, percentResign), y = percentResign)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Top 10 Schools by Resignation Percentage",
+       x = "School",
+       y = "Resignation Percentage (%)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+selected_schools <- c("OMAHA PUBLIC SCHOOLS", "LINCOLN PUBLIC SCHOOLS", "MILLARD PUBLIC SCHOOLS", "GRETNA PUBLIC SCHOOLS", "ELKHORN PUBLIC SCHOOLS")
+
+filtered_schools <- dd %>%
+  filter(DistrictName %in% selected_schools)
+
+# Plotting
+ggplot(filtered_schools, aes(x = myYear, y = percentResign, color = DistrictName)) +
+  geom_line(aes(linewidth = 1)) + 
+  geom_point(size = 2) +  # Adjust point size as needed
+  labs(title = "Resignation Percentage Over Years for Selected Schools",
+       x = "Year", y = "Resignation Percentage (%)",
+       color = "School Name") +
+  theme_minimal() +
+  theme(legend.position = "bottom")  # Adjust legend position as needed
+
+```
+
+## Plotting Data for Analysis
+
+It is observed that the plot is having higher number of Masters Degree followed by Bachelors Degree over the years.
+
+```{r , echo=FALSE, eval=FALSE, warning=FALSE, message=FALSE}
+ggplot(staff_df, aes(EducationalAttainment)) + 
+  geom_bar() + 
+  coord_flip() +
+  labs(title = "Educational Attainment of the Dsitric Public Schools",
+       x = "Educational Qualification", y = "Number of Employee") +
+  theme_minimal()
+```
+```{r}
+educational_table <- table(staff_df$EducationalAttainment)
+educational_df <- as.data.frame(educational_table)
+names(educational_df) <- c("Educational Qualification", "Number of Employees")
+educational_df <- educational_df[order(-educational_df$`Number of Employees`), ]
+
+library(knitr)
+kable(educational_df, col.names = c("Educational Qualification", "Number of Employees"))
+```
+
+
+```{r}
+staff_final <- staff_df %>%
+  group_by(NDE_STAFF_ID)  %>%
+  mutate(resignYear= as.numeric(substr(max(DataYears),5,8)),
+         time=max(TotalExperience) ,
+         time=ifelse(time==0,0.1,time))%>%
+  mutate(delta= (resignYear<'2021')*1)%>%
+  select(NDE_STAFF_ID, Gender, Ethnicity, Position_Codes,MasterDegree, 
+         resignYear, time, delta)  %>%
+  filter(Gender != 'Unknown')  %>%
+  mutate(Gender = droplevels(Gender, exclude ='Unknown')) %>%
+  filter(Ethnicity != 'Races Unknown')  %>%
+  mutate(Ethnicity = droplevels(Ethnicity, exclude ='Races Unknown')) %>%
+ filter(Ethnicity != "  ") %>%
+  mutate(Ethnicity = droplevels(Ethnicity, exclude ="  ")) %>%
+  filter(Position_Codes != 'Unknown') %>%
+  mutate(Position_Codes = droplevels(Position_Codes, exclude ='Unknown'))
+  
+
+
+staff_final <- staff_df %>%
+  group_by(NDE_STAFF_ID)  %>%
+  summarize(resignYear= max(as.numeric(substr(DataYears,5,8))),
+         time=max(TotalExperience),
+         Gender = Gender[1],
+         Ethnicity = Ethnicity[1], 
+         Position_Codes = Position_Codes[1],
+         MasterDegree = MasterDegree[1],
+         FTE = FTE[1]) %>%
+  mutate(time = ifelse(time==0,0.1,time),
+         delta = (resignYear<'2021')*1 ) %>%
+  filter(Gender != 'Unknown' , 
+           Ethnicity != 'Races Unknown' ,
+           Position_Codes != 'Unknown') %>%
+  mutate(Gender = droplevels(Gender, exclude ='Unknown'),
+         Ethnicity = droplevels(Ethnicity, exclude ='Races Unknown'),
+         Position_Codes = droplevels(Position_Codes, exclude ='Unknown'))
+
+staff_final
+  
+```
+
+While plotting the column for Gender, some of the fields were missing, we have declared those fields as Unknown and omitted those fields to obtain the trend.It is observed that more number of Female staff chose the Teaching Profession compared to Male Staff.
+```{r , echo=FALSE, warning=FALSE, message=FALSE, fig.width=10 , fig.height=4 , out.width="90%"}
+
+ggplot(subset(staff_final,Gender != 'Unknown'), aes(Gender))  + geom_bar()
+
+
+ggplot(subset(staff_final,Gender != 'Unknown'), aes(Position_Codes)) + facet_wrap(~Gender) + geom_bar() + coord_flip()
+
+table(staff_final$Gender)
+```
+
+# Determining Joining year and Exit year
+```{r}
+library(dplyr)
+
+staff_summary <- staff_df %>%
+  group_by(NDE_STAFF_ID) %>%
+  summarise(
+    Joining_Year = first(myYear), # Retrieves the first year they appear in your dataset
+    First_Position_Code = first(Position_Codes), # Retrieves the position code during their first appearance
+    Exit_Year = last(myYear), # Retrieves the last year they appear in your dataset
+    Last_Position_Code = if_else(last(myYear) == 2020, last(Position_Codes), "Exit"), # Adjusts based on the condition
+    Ethnicity = first(Ethnicity) # Adds the ethnicity column to the summary
+  ) %>%
+  ungroup()
+
+# View the summary
+print(staff_summary)
+
+```
+
+
+
+```{r}
+# library(dplyr)
+# 
+# # Step 1: Prepare the data
+# staff_df <- staff_df %>%
+#   arrange(NDE_STAFF_ID, myYear)
+# 
+# # Step 2: Identify Transitions
+# # Add a column to identify the next year's position for each staff member
+# staff_transitions <- staff_df %>%
+#   group_by(NDE_STAFF_ID) %>%
+#   mutate(Next_Position_Codes = lead(Position_Codes)) %>%
+#   ungroup()
+# 
+# # Filter out the rows where there is no next position (i.e., the last year for each staff member)
+# staff_transitions <- staff_transitions %>%
+#   filter(!is.na(Next_Position_Codes))
+# 
+# # Step 3: Aggregate Transitions
+# # Count the number of transitions from each position to the next
+# transition_counts <- staff_transitions %>%
+#   count(Position_Codes, Next_Position_Codes)
+# 
+# # View the counts
+# print(transition_counts)
+
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+# Identify transitions
+staff_transitions <- staff_df %>%
+  group_by(NDE_STAFF_ID) %>%
+  mutate(Next_Position_Codes = lead(Position_Codes)) %>%
+  filter(!is.na(Next_Position_Codes)) %>%
+  ungroup()
+
+# Calculate transition counts
+transition_counts <- staff_transitions %>%
+  count(Position_Codes, Next_Position_Codes)
+
+# Spread the counts into a matrix format
+transition_matrix <- transition_counts %>%
+  pivot_wider(names_from = Next_Position_Codes, values_from = n, values_fill = list(n = 0))
+
+# For better readability, convert to a matrix object
+transition_matrix <- as.matrix(select(transition_matrix, -Position_Codes))
+rownames(transition_matrix) <- transition_counts$Position_Codes[!duplicated(transition_counts$Position_Codes)]
+
+# View the transition matrix
+print(transition_matrix)
+```
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+# First, flag each individual as 'alive' or 'retired' in the dataset
+staff_df <- staff_df %>%
+  group_by(NDE_STAFF_ID) %>%
+  mutate(Alive = if_else(any(myYear == 2020), TRUE, FALSE)) %>%
+  ungroup()
+
+# Then, for those who are not 'alive', change their last Position_Codes to 'Exit'
+staff_df <- staff_df %>%
+  group_by(NDE_STAFF_ID) %>%
+  mutate(Position_Codes = if_else(row_number() == n() & !Alive, "Exit", Position_Codes)) %>%
+  ungroup()
+
+# Now identify transitions
+staff_transitions <- staff_df %>%
+  group_by(NDE_STAFF_ID) %>%
+  mutate(Next_Position_Codes = lead(Position_Codes)) %>%
+  filter(!is.na(Next_Position_Codes)) %>%
+  ungroup()
+
+# Calculate transition counts
+transition_counts <- staff_transitions %>%
+  count(Position_Codes, Next_Position_Codes)
+
+# Spread the counts into a matrix format
+transition_matrix <- transition_counts %>%
+  pivot_wider(names_from = Next_Position_Codes, values_from = n, values_fill = list(n = 0))
+
+# For better readability, convert to a matrix object
+transition_matrix <- as.matrix(select(transition_matrix, -Position_Codes))
+rownames(transition_matrix) <- transition_counts$Position_Codes[!duplicated(transition_counts$Position_Codes)]
+
+# View the transition matrix
+print(transition_matrix)
+
+```
+
+
+
+
+```{r}
+# library(igraph)
+# 
+# 
+# # Create the directed graph
+# g <- graph_from_data_frame(d = edges, vertices = nodes, directed = TRUE)
+# 
+# # Define node attributes
+# V(g)$color <- "#45A500"
+# V(g)$size <- 25
+# V(g)$label.color <- "#009BE8"  # Set to black for visibility
+# V(g)$label.cex <- 0.8  # Adjust text size as needed
+# V(g)$label.dist <- 0.5  # Adjust label distance from node
+# V(g)$label.font <- 1 # Bold
+# 
+# # Define edge attributes. Normalize the width by dividing by a value to get a sensible scale.
+# E(g)$color <- "#E96485"
+# E(g)$arrow.size <- 0.5  # Small arrow size
+# E(g)$width <- log1p(E(g)$weight)  # Use the logarithm to scale the edge weights
+# 
+# # Plot the graph with a circular layout
+# plot(g, layout = layout_in_circle(g), 
+#      main = "Staff's Directed Transitions Graph (log scale on the edge weights)")
+# 
+# cols <- hcl(h=c(0,120,240), c=c(90,90,90), l=c(60,60,60))
+# cols
+```
+
+
+
+```{r}
+# Assuming 'transition_matrix' has been successfully created as shown in your script.
+
+# Define all unique state names, including 'Exit'
+state_names <- c("Administrator", "Counselor", "Specialist", "Support Staff", 
+                 "Teacher", "Teacher Leader", "Unknown", "Exit") # Add or remove states as necessary
+
+# Create a square matrix if not already square
+square_matrix <- matrix(0, nrow = length(state_names), ncol = length(state_names), 
+                        dimnames = list(state_names, state_names))
+
+# Fill in the counts from the transition_matrix into the square_matrix
+for (state in state_names) {
+  if (state %in% rownames(transition_matrix)) {
+    # Ensure to only copy values for existing columns to avoid subscript out of bounds error
+    existing_columns <- colnames(transition_matrix) %in% state_names
+    square_matrix[state, colnames(transition_matrix)[existing_columns]] <- transition_matrix[state, existing_columns]
+  }
+}
+
+# Replace the rows that sum to zero with ones along the diagonal
+diag_indices <- which(rowSums(square_matrix) == 0, arr.ind = TRUE)
+if(length(diag_indices) > 0) { # Check if there are such rows
+  square_matrix[cbind(diag_indices, diag_indices)] <- 1
+}
+
+# Convert the counts to probabilities
+transition_prob_matrix <- square_matrix / rowSums(square_matrix)
+
+# Load necessary library
+library(markovchain)
+
+# Create the Markov chain object
+mc <- new("markovchain", states = state_names,
+          transitionMatrix = transition_prob_matrix,
+          name = "Position Changes")
+
+# Ensure each row sums to one, adjusting if necessary
+if(any(abs(rowSums(mc@transitionMatrix) - 1) > .Machine$double.eps * 100)) {
+  stop("Not all rows in the transition probability matrix sum to one.")
+}
+
+print(mc)
+
+```
+
+```{r}
+# Example usage: Find steady-state probabilities
+#steady_states <- steadyStates(mc)
+#print(steady_states)
+
+# Example usage: Simulate transitions
+#start_state <- "Administrator" # Replace with your desired starting state
+#sequence <- rmarkovchain(n = 10, object = mc, t0 = start_state)
+#print(sequence)
+
+```
+
+
+```{r}
+# Run a long simulation
+long_sequence <- rmarkovchain(n = 10, object = mc, t0 = "Support Staff")
+
+# Calculate the long-run frequency of each state
+long_run_freq <- table(long_sequence) / length(long_sequence)
+
+# Print the long-run frequencies
+print(long_run_freq)
+
+```
+
+
+```{r}
+# library(tidyr)
+# library(tibble) # Load the tibble package explicitly
+# 
+# # Convert the transition_prob_matrix to a dataframe in long format
+# transition_matrix_long <- as.data.frame(transition_prob_matrix) %>%
+#   rownames_to_column(var = "FromRole") %>%
+#   pivot_longer(-FromRole, names_to = "ToRole", values_to = "Probability")
+# 
+# # Assuming transition_matrix_long has been correctly created and contains the 'Probability' column
+# 
+# # Adjust the probabilities by adding a small value to avoid log(0) if necessary
+# # Here, I'll show you how to adjust the probabilities directly, without creating a new column
+# transition_matrix_long$ProbabilityAdjusted <- transition_matrix_long$Probability + 1e-6
+# 
+# # Plotting the heatmap with the adjusted probabilities
+# ggplot(data = transition_matrix_long, aes(x = FromRole, y = ToRole, fill = ProbabilityAdjusted)) +
+#   geom_tile() +
+#   scale_fill_gradient(low = "white", high = "blue", trans = "log") +
+#   theme_minimal() +
+#   labs(x = "From Role", y = "To Role", fill = "Log-Adjusted Transition Probability") +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+
+#A heatmap of the transition matrix can visually represent the frequency of transitions between different positions
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(scales) # For the trans argument in scale_fill_gradientn
+
+# Assuming transition_prob_matrix is the matrix you want to plot
+transition_matrix_long <- as.data.frame(as.table(transition_prob_matrix))
+
+# Rename the columns for clarity
+colnames(transition_matrix_long) <- c("Var1", "Var2", "Freq")
+
+# Now add the FreqAdjusted column correctly
+transition_matrix_long$FreqAdjusted <- transition_matrix_long$Freq + 1
+
+# Proceed with your ggplot2 code for plotting
+
+
+# Now add the FreqAdjusted column correctly
+transition_matrix_long$FreqAdjusted <- transition_matrix_long$Freq + 1
+
+# Proceed with your ggplot2 code for plotting
+
+# Create the heatmap with a log scale for fill using the adjusted frequencies
+ggplot(data = transition_matrix_long, aes(x = Var1, y = Var2, fill = FreqAdjusted)) +
+  geom_tile() + # Use geom_tile() to create the heatmap
+  scale_fill_gradientn(colors = c("pink", "blue"), trans = "log", 
+                       na.value = "white", # Set color for NA values
+                       breaks = c(1, 10, 100, 1000, 10000), # Adjust these breaks as needed for your dataset
+                       labels = scales::comma) + # Use comma formatting for breaks labels
+  theme_minimal() + # Minimal theme for a cleaner look
+  labs(x = "Current Position", y = "Next Position", fill = "Transition Count ",
+       title = "Transition of Position on log scale") + # Adjust label for clarity
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) # Rotate x-axis labels for better readability
+
+
+```
+
+#the positions as nodes and transitions as directed edges in a network graph
+```{r}
+# Load necessary library
+library(igraph)
+
+# Convert the transition matrix to an edge list
+transition_matrix_long$Var1 <- as.character(transition_matrix_long$Var1)
+transition_matrix_long$Var2 <- as.character(transition_matrix_long$Var2)
+edge_list <- subset(transition_matrix_long, Freq > 0) # Optional: filter out zero transitions
+
+# Create the graph from the edge list
+graph <- graph_from_data_frame(d = edge_list, directed = TRUE)
+
+#library(igraph)
+
+# Assuming 'graph' is your graph object and it's already created
+# Compute the layout
+layout <- layout_with_fr(graph)
+
+# Scale the layout to increase space between nodes
+scaling_factor <- 5  # Adjust this as needed
+layout <- layout * scaling_factor
+
+# Now plot the graph using the new scaled layout
+plot(graph, 
+     layout = layout,
+     edge.width = E(graph)$weight,
+     edge.arrow.size = 0.5,
+     vertex.size = 15, 
+     vertex.label.cex = 0.8, 
+     vertex.color = "lightblue", 
+     main = "Weighted Directed Transition Network"
+)
+
+```
+# two way directed graph of transition matrix
+```{r}
+# Load necessary library
+library(igraph)
+
+# Adjust the creation of reversed_transitions to include only the first three columns of transition_matrix_long
+reversed_transitions <- transition_matrix_long[, c('Var2', 'Var1', 'Freq')]
+
+# Since there's no 'FreqAdjusted' column in reversed_transitions, we can safely set the column names
+colnames(reversed_transitions) <- c('Var1', 'Var2', 'Freq')
+
+# Combine the original and reversed transitions
+bidirectional_transitions <- rbind(transition_matrix_long[, c('Var1', 'Var2', 'Freq')], reversed_transitions)
+
+# Remove self-loops and duplicates
+bidirectional_transitions <- bidirectional_transitions[bidirectional_transitions$Var1 != bidirectional_transitions$Var2, ]
+bidirectional_transitions <- unique(bidirectional_transitions)
+
+# Create the graph
+graph <- graph_from_data_frame(d = bidirectional_transitions, directed = TRUE)
+
+# Calculate log-scaled edge widths for visualization
+log_edge_widths <- log(E(graph)$Freq + 1)
+normalized_log_edge_widths <- log_edge_widths / max(log_edge_widths) * 5
+
+# Plot the graph
+plot(graph, 
+     edge.arrow.size = 0.5, 
+     vertex.label.cex = 0.7, 
+     edge.width = normalized_log_edge_widths,
+     vertex.color = "lightblue", 
+     main = "Bidirectional Position Transition Network",
+     layout = layout_nicely(graph)
+)
+
+```
+
+```{r}
+library(igraph)
+
+# Assuming the rest of the graph setup is already done...
+
+# Define node size based on degree (number of connections)
+node_size <- degree(graph, mode = "all") + 1
+
+# Define node color based on betweenness centrality to highlight important nodes
+node_color <- betweenness(graph)
+node_color <- node_color / max(node_color) # Normalize
+
+# Define edge color based on frequency
+edge_color <- E(graph)$Freq
+edge_color <- cut(edge_color, breaks = quantile(edge_color, probs = 0:5/5), include.lowest = TRUE, labels = FALSE)
+edge_color <- as.factor(edge_color) # convert to a factor for discrete coloring
+
+# Choose a layout
+layout <- layout_with_fr(graph)
+
+# Plot the graph with adjustments
+plot(graph, 
+     layout = layout,
+     edge.arrow.size = 0.5,
+     vertex.size = node_size * 2, # Scale up the node size
+     vertex.color = node_color,
+     vertex.frame.color = "pink", # Set vertex border color to white
+     vertex.label.cex = 0.7,
+     vertex.label.dist = 0.5, # Adjust label distance
+     edge.width = normalized_log_edge_widths,
+     edge.color = edge_color, # Apply the edge colors based on frequency
+     main = "Position Transition Network"
+)
+```
+
+
+```{r}
+library(igraph)
+library(RColorBrewer)
+# Assuming 'graph' is already defined and has attributes set up correctly
+
+# Define node size based on degree (number of connections)
+node_size <- degree(graph, mode = "all") + 1
+
+# Choose a palette with distinct colors
+num_nodes <- length(V(graph))
+palette <- brewer.pal(min(num_nodes, 8), "Set1") # 'Set1' is good for distinct colors
+if (num_nodes > 8) {
+  palette <- colorRampPalette(palette)(num_nodes)
+}
+
+# Create a named vector of colors for the nodes
+node_color_palette <- setNames(palette, V(graph)$name)
+
+# Assign colors to edges based on the 'from' node
+edge_color <- sapply(E(graph), function(e) {
+  # Retrieve the endpoints of the edge
+  edge_ends <- ends(graph, e)
+  # Retrieve the name of the source node for each edge
+  source_node <- V(graph)[edge_ends[1]]$name
+  # Assign the color based on the source node's name
+  node_color_palette[source_node]
+})
+```
+
+```{r}
+# Choose a layout
+layout1 <- layout_with_kk(graph) 
+
+# Plot the graph with adjustments
+plot(graph, 
+     layout = layout1,
+     edge.arrow.size = 0.2, # arrow size
+     vertex.size = node_size * 2, # Scale up the node size
+     vertex.color = node_color_palette[V(graph)$name], # Assign the generated colors to vertices
+     vertex.frame.color = "pink", # Set vertex border color to pink
+     vertex.label.cex = 0.7,
+     vertex.label.dist = 0.5, # Adjust label distance
+     edge.width = E(graph)$weight, #normalized_log_edge_widths
+     edge.color = edge_color, # Apply the node-based edge colors
+     main = "Bidirectional Position Transition Network"
+)
+
+```
+
+
+```{r}
+layout2 <- layout_with_fr(graph) 
+
+plot(graph, 
+     layout = layout2,
+     edge.arrow.size = 0.5, # You might need to adjust this based on the overall graph size
+     vertex.size = node_size * 2, # Scaling factor for node size
+     vertex.color = node_color_palette[V(graph)$name], # Colors assigned to nodes
+     vertex.frame.color = NA, # Remove the border or set to a neutral color
+     vertex.label.cex = 0.7, # Adjust label size as needed
+     vertex.label.dist = 0.5, # Adjust label distance as needed
+     edge.width = E(graph)$weight, # Set to a constant value for clarity #normalized_log_edge_widths
+     edge.color = edge_color, # Colors assigned to edges based on the 'from' node
+     main = " Position Transition Network"
+)
+
+```
+
+```{r}
+library(igraph)
+
+# Generate a layout
+layout3 <- layout_with_fr(graph)
+
+# Scale the layout to increase the distance between nodes
+scaling_factor <- 2  # You can adjust this value as needed
+layout3 <- layout3 * scaling_factor
+
+# Now plot the graph using the scaled layout
+plot(graph, 
+     layout = layout3,
+     edge.arrow.size = 0.5,
+     vertex.size = node_size * 2,
+     vertex.color = node_color_palette[V(graph)$name],
+     vertex.frame.color = NA,  # Remove the border by setting it to NA
+     vertex.label.cex = 0.7,
+     vertex.label.dist = 0.5,
+     edge.width = E(graph)$weight,  # You can adjust this as needed
+     edge.color = edge_color,
+     main = "Bidirectional Position Transition Network"
+)
+
+```
+
+
+```{r}
+library(igraph)
+
+# Assuming 'graph' is your graph object and it's already created
+# Compute the layout
+layout <- layout_with_fr(graph)
+
+# Scale the layout to increase space between nodes
+scaling_factor <- 2  # Adjust this as needed
+layout <- layout * scaling_factor
+
+# Now plot the graph using the new scaled layout
+plot(graph, 
+     layout = layout,
+     edge.width = E(graph)$weight,
+     edge.arrow.size = 0.5,
+     vertex.size = 15, 
+     vertex.label.cex = 0.8, 
+     vertex.color = "lightblue", 
+     main = "Weighted Directed Transition Network"
+)
+
+```
+
+
+#what are the top ten common transition among employee ?
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Assuming transition_matrix_long is your long-format transition data
+# Highlighting the top 10 most common transitions
+top_transitions <- transition_matrix_long %>%
+  arrange(desc(Freq)) %>%
+  head(10)
+
+ggplot(top_transitions, aes(x = reorder(paste(Var1, Var2, sep = " -> "), Freq), y = Freq)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() + # Flip coordinates for horizontal bars
+  labs(x = "Transition", y = "Frequency", title = "Top 10 Most Common Transitions") +
+  theme_minimal()
+
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Assuming transition_matrix_long is your long-format transition data
+# Highlighting the top 10 most common transitions
+top_transitions <- transition_matrix_long %>%
+  arrange(desc(Freq)) %>%
+  head(10)
+
+ggplot(top_transitions, aes(x = reorder(paste(Var1, Var2, sep = " -> "), Freq), y = Freq)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  scale_y_log10() + # Apply logarithmic scale to the y-axis
+  coord_flip() + # Flip coordinates for horizontal bars
+  labs(x = "Transition", y = "Number of Employee (Log Scale)", title = "Top 10 Most Common Transitions") +
+  theme_minimal()
+
+```
+
+
+
+#What roles serve as pivotal nodes in the organizational career transition network ?
+
+#Pivotal nodes within the organizational network refer to positions or roles that play a crucial and influential role in facilitating communication, collaboration, and overall organizational dynamics.
+
+#the more central a node is, the closer it is to all other nodes.
+```{r}
+# Calculate degree centrality (considering the network's directed nature)
+degree_centrality <- degree(graph, mode = "all") # 'all' considers both in-degree and out-degree
+
+# Sort positions by their centrality score
+sorted_centrality <- sort(degree_centrality, decreasing = TRUE)
+
+# Display the top positions by centrality
+sorted_centrality
+```
+#Counselor, Specialist, Teacher (15 each)
+#Administrator, Support Staff, Teacher Leader (13 each)
+
+Counselor, Specialist, and Teacher are central nodes in the organizational network, suggesting pivotal roles in career mobility and progression, while Administrator, Support Staff, and Teacher Leader, with slightly lower centrality, remain crucial to organizational dynamics and structure.
+
+
+
+
+#How do positions with varying levels of betweenness centrality contribute to Nebraska Education department?
+
+
+#Betweenness Centrality: Identifies roles as bridges or connectors between other roles, potentially indicating critical positions for information flow and collaboration.
+```{r}
+betweenness_centrality <- betweenness(graph, directed = TRUE)
+# Sorting and displaying the roles with the highest betweenness centrality
+sorted_betweenness <- sort(betweenness_centrality, decreasing = TRUE)
+sorted_betweenness
+```
+#Roles with high betweenness centrality, such as Counselor, Specialist, and Teacher, are crucial connectors within the organizational structure, necessitating strategic HR focus on their development, retention, and structural support to enhance organizational connectivity and performance.
+
+
+
+#What roles demonstrate the highest closeness centrality in the organizational network, and what does this imply for their potential to influence organizational efficiency and communication ?
+
+#Closeness Centrality: Reveals positions that can efficiently interact with all others, indicating potentially influential roles within the organization.
+```{r}
+closeness_centrality <- closeness(graph, mode = "all")
+# Sorting and displaying the roles with the highest closeness centrality
+sorted_closeness <- sort(closeness_centrality, decreasing = TRUE)
+head(sorted_closeness)
+
+```
+
+Counselor, Specialist, Teacher, and Exit positions, with the highest closeness centrality scores, are optimally positioned to efficiently disseminate information across the organization, indicating their critical role in enhancing organizational communication and efficiency.
+
+
+
+#How do the identified communities of positions within the organizational network influence communication patterns, role interdependencies, and organizational structure?
+
+#to answer this we use community detection algorithms.Community detection algorithms can identify clusters within the network, suggesting functional or hierarchical groupings not immediately apparent
+```{r}
+# Convert the directed graph to undirected
+undirected_graph <- as.undirected(graph, mode = "mutual") # Considers mutual connections
+# Alternatively, use mode = "collapse" to combine all directed edges into a single undirected edge
+
+# Perform community detection on the undirected graph
+community_detection <- cluster_louvain(undirected_graph)
+
+# Visualize the communities
+plot(community_detection, undirected_graph)
+```
+
+The community detection analysis reveals distinct clusters of positions within the organizational network, indicating cohesive groups of roles with higher levels of interaction and interdependence.
+
+
+
+
+# ########
+
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(readr)
+
+# Load data
+staff_data <- staffdf
+
+# Step 1: Identify the year an employee joined, year they resigned, first designation, and last designation
+staff_summary <- staff_data %>%
+  group_by(NDE_STAFF_ID) %>%
+  summarize(
+    join_year = min(DataYears),
+    resign_year = max(DataYears),
+    first_designation = first(Position_Codes),
+    last_designation = last(Position_Codes)
+  )
+
+print("Staff Summary:")
+print(head(staff_summary))
+
+```
+
+
+```{r}
+# Determine Exit Status
+all_years <- unique(staff_data$DataYears)
+all_years <- sort(all_years)
+
+has_exited <- function(id, year) {
+  if (year == 20202021) {
+    return(FALSE)
+  } else {
+    next_years <- all_years[which(all_years > year)]
+    if (length(next_years) == 0) {
+      return(TRUE)
+    } else {
+      return(!any(staff_data$NDE_STAFF_ID == id & staff_data$DataYears %in% next_years))
+    }
+  }
+}
+
+# Apply has_exited function to determine if each employee has exited
+staff_summary <- staff_summary %>%
+  rowwise() %>%
+  mutate(exited = has_exited(NDE_STAFF_ID, resign_year))
+
+# Check if last_designation contains NAs or unexpected types
+print("Check for NAs in last_designation:")
+print(any(is.na(staff_summary$last_designation)))
+
+print("Unique values in last_designation:")
+print(unique(staff_summary$last_designation))
+
+# Ensure `exited` is logical
+print("Unique values in exited:")
+print(unique(staff_summary$exited))
+
+# Apply the correct logic for exit_or_latest_designation
+staff_summary <- staff_summary %>%
+  mutate(exit_or_latest_designation = ifelse(exited, "EXIT", as.character(last_designation)))
+
+# Display the summary to verify
+print("Staff Summary with Exit Status:")
+print(head(staff_summary))
+
+# Verify unique values in exit_or_latest_designation
+print("Unique values in exit_or_latest_designation:")
+print(unique(staff_summary$exit_or_latest_designation))
+
+# Debugging: Check specific cases for exit determination
+print("Check specific cases for exit determination:")
+print(staff_summary %>% filter(NDE_STAFF_ID %in% c(1001092648, 1001186154, 1001393943)))
+
+# Debugging: Check if anyone has not exited
+print("Check if anyone has not exited:")
+print(staff_summary %>% filter(exited == FALSE))
+
+```
+
+
+
+
+```{r}
+# Step 3: Calculate Transitions Efficiently
+staff_data <- staff_data %>%
+  left_join(staff_summary, by = "NDE_STAFF_ID") %>%
+  arrange(NDE_STAFF_ID, DataYears) %>%
+  group_by(NDE_STAFF_ID) %>%
+  mutate(next_position = lead(Position_Codes, order_by = DataYears),
+         next_exited = lead(exited, order_by = DataYears)) %>%
+  ungroup() %>%
+  filter(!is.na(next_position)) %>%
+  mutate(to = if_else(next_exited == TRUE, "EXIT", next_position))
+
+transitions <- staff_data %>%
+  select(from = Position_Codes, to) %>%
+  filter(!is.na(to))
+
+print("Transitions:")
+print(head(transitions))
+
+# Debugging: Check specific transitions
+print("Check specific transitions:")
+print(transitions %>% filter(from == "Teacher"))
+
+
+```
+
+
+```{r}
+# Define states based on the descriptive labels in the Position_Codes column and add "EXIT"
+states <- unique(c(as.character(staff_data$Position_Codes), "EXIT"))
+
+print("States:")
+print(states)
+
+# Create a transition matrix with all unique states
+transition_matrix <- matrix(0, nrow = length(states), ncol = length(states), dimnames = list(states, states))
+
+# Count transitions using table
+transition_counts <- table(transitions$from, transitions$to)
+
+print("Transition Counts:")
+print(transition_counts)
+
+# Populate the transition matrix with counts
+for (from_state in rownames(transition_counts)) {
+  for (to_state in colnames(transition_counts)) {
+    if (from_state %in% rownames(transition_matrix) && to_state %in% colnames(transition_matrix)) {
+      transition_matrix[from_state, to_state] <- transition_counts[from_state, to_state]
+    }
+  }
+}
+
+print("Transition Matrix (Counts):")
+print(transition_matrix)
+
+# Convert counts to probabilities
+transition_matrix <- sweep(transition_matrix, 1, rowSums(transition_matrix), FUN = "/")
+transition_matrix[is.nan(transition_matrix)] <- 0
+
+print("Transition Matrix (Probabilities):")
+print(transition_matrix)
+
+```
+
+
+
+```{r}
+# Load necessary library for visualization
+library(DiagrammeR)
+
+# Create a function to generate Markov Chain diagram
+generate_markov_chain_diagram <- function(transition_matrix, states) {
+  # Create edges dataframe
+  edges <- data.frame()
+  for (from in states) {
+    for (to in states) {
+      prob <- transition_matrix[from, to]
+      if (prob > 0) {
+        edges <- rbind(edges, data.frame(from = from, to = to, label = round(prob, 3), weight = prob))
+      }
+    }
+  }
+  
+  # Create nodes dataframe
+  nodes <- create_node_df(n = length(states), label = states)
+  
+  # Create edges dataframe
+  edges <- create_edge_df(from = match(edges$from, states), 
+                          to = match(edges$to, states), 
+                          rel = edges$label,
+                          penwidth = edges$weight * 12)
+  
+  # Create graph
+  graph <- create_graph() %>%
+    add_node_df(nodes) %>%
+    add_edge_df(edges) %>%
+    add_global_graph_attrs(attr = "layout", value = "dot", attr_type = "graph") %>%
+    add_global_graph_attrs(attr = "rankdir", value = "LR", attr_type = "graph") %>%
+    add_global_graph_attrs(attr = "splines", value = "true", attr_type = "graph") %>%
+    add_global_graph_attrs(attr = "overlap", value = "false", attr_type = "graph")
+  
+  render_graph(graph)
+}
+
+# Generate and visualize Markov Chain diagram
+generate_markov_chain_diagram(transition_matrix, states)
+
+```
+
+```{r}
+# Find the most common transitions
+common_transitions <- transitions %>%
+  group_by(from, to) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count))
+
+print("Most common transitions:")
+print(head(common_transitions, 10))
+
+# Analyze specific transitions
+specific_transitions <- transitions %>%
+  filter(from == "Teacher" & to == "EXIT")
+
+print("Specific transitions from Teacher to EXIT:")
+print(specific_transitions)
+
+```
+
+```{r}
+# Load necessary library for visualization
+library(ggplot2)
+
+# Analyze specific transitions in more detail
+specific_transitions_details <- staff_data %>%
+  filter(Position_Codes == "Teacher" & to == "EXIT") %>%
+  select(NDE_STAFF_ID, DataYears, DistrictName, TotalExperience, FTE, MasterDegree, EducationalAttainment)
+
+print("Details of Teachers transitioning to EXIT:")
+print(head(specific_transitions_details, 10))
+
+# Visualize the distribution of years of experience for teachers transitioning to EXIT
+ggplot(specific_transitions_details, aes(x = TotalExperience)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+  labs(title = "Distribution of Total Experience for Teachers Transitioning to EXIT", x = "Total Experience (years)", y = "Count")
+
+```
+
+```{r}
+# Load necessary library for visualization
+library(ggplot2)
+options(scipen = 999)
+# Visualize the most common transitions
+common_transitions <- transitions %>%
+  group_by(from, to) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count))
+
+# Plot the most common transitions
+ggplot(common_transitions, aes(x = reorder(from, -count), y = count, fill = to)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Most Common Transitions", x = "From Position", y = "Count") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+# Analyze specific transitions for Specialists transitioning to EXIT
+specialist_to_exit <- staff_data %>%
+  filter(Position_Codes == "Specialist" & to == "EXIT") %>%
+  select(NDE_STAFF_ID, DataYears, DistrictName, TotalExperience, FTE, MasterDegree, EducationalAttainment)
+
+print("Details of Specialists transitioning to EXIT:")
+print(head(specialist_to_exit, 10))
+
+# Visualize the distribution of years of experience for specialists transitioning to EXIT
+ggplot(specialist_to_exit, aes(x = TotalExperience)) +
+  geom_histogram(binwidth = 1, fill = "green", color = "black") +
+  labs(title = "Distribution of Total Experience for Specialists Transitioning to EXIT", x = "Total Experience (years)", y = "Count")
+
+```
+
+```{r}
+# Analyze additional factors influencing transitions
+transition_factors <- staff_data %>%
+  filter(Position_Codes == "Teacher" & to == "EXIT") %>%
+  select(NDE_STAFF_ID, DataYears, DistrictName, TotalExperience, FTE, Gender, MasterDegree, EducationalAttainment)
+
+print("Factors influencing transitions from Teacher to EXIT:")
+print(head(transition_factors, 10))
+
+# Visualize influence of FTE on transitions
+ggplot(transition_factors, aes(x = FTE, fill = as.factor(Gender))) +
+  geom_bar(position = "dodge") +
+  labs(title = "Influence of FTE on Transitions from Teacher to EXIT", x = "FTE", y = "Count", fill = "Gender")
+
+# Visualize influence of Educational Attainment on transitions
+ggplot(transition_factors, aes(x = EducationalAttainment, fill = as.factor(Gender))) +
+  geom_bar(position = "dodge") +
+  labs(title = "Influence of Educational Attainment on Transitions from Teacher to EXIT", x = "Educational Attainment", y = "Count", fill = "Gender")
+
+```
+
